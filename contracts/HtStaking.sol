@@ -1,21 +1,21 @@
 pragma solidity 0.6.12;
 
-import '@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol';
+import '@hubdao-finance/hubdao-lib/contracts/math/SafeMath.sol';
+import '@hubdao-finance/hubdao-lib/contracts/token/HRC20/IHRC20.sol';
+import '@hubdao-finance/hubdao-lib/contracts/token/HRC20/SafeHRC20.sol';
+import '@hubdao-finance/hubdao-lib/contracts/access/Ownable.sol';
 
 // import "@nomiclabs/buidler/console.sol";
 
-interface IWBNB {
+interface IWHT {
     function deposit() external payable;
     function transfer(address to, uint256 value) external returns (bool);
     function withdraw(uint256) external;
 }
 
-contract BnbStaking is Ownable {
+contract HtStaking is Ownable {
     using SafeMath for uint256;
-    using SafeBEP20 for IBEP20;
+    using SafeHRC20 for IHRC20;
 
     // Info of each user.
     struct UserInfo {
@@ -26,21 +26,21 @@ contract BnbStaking is Ownable {
 
     // Info of each pool.
     struct PoolInfo {
-        IBEP20 lpToken;           // Address of LP token contract.
+        IHRC20 lpToken;           // Address of LP token contract.
         uint256 allocPoint;       // How many allocation points assigned to this pool. CAKEs to distribute per block.
         uint256 lastRewardBlock;  // Last block number that CAKEs distribution occurs.
         uint256 accCakePerShare; // Accumulated CAKEs per share, times 1e12. See below.
     }
 
     // The REWARD TOKEN
-    IBEP20 public rewardToken;
+    IHRC20 public rewardToken;
 
     // adminAddress
     address public adminAddress;
 
 
-    // WBNB
-    address public immutable WBNB;
+    // WHT
+    address public immutable WHT;
 
     // CAKE tokens created per block.
     uint256 public rewardPerBlock;
@@ -49,7 +49,7 @@ contract BnbStaking is Ownable {
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
     mapping (address => UserInfo) public userInfo;
-    // limit 10 BNB here
+    // limit 10 HT here
     uint256 public limitAmount = 10000000000000000000;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
@@ -63,20 +63,20 @@ contract BnbStaking is Ownable {
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
     constructor(
-        IBEP20 _lp,
-        IBEP20 _rewardToken,
+        IHRC20 _lp,
+        IHRC20 _rewardToken,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock,
         address _adminAddress,
-        address _wbnb
+        address _wht
     ) public {
         rewardToken = _rewardToken;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
         adminAddress = _adminAddress;
-        WBNB = _wbnb;
+        WHT = _wht;
 
         // staking pool
         poolInfo.push(PoolInfo({
@@ -96,7 +96,7 @@ contract BnbStaking is Ownable {
     }
 
     receive() external payable {
-        assert(msg.sender == WBNB); // only accept BNB via fallback from the WBNB contract
+        assert(msg.sender == WHT); // only accept HT via fallback from the WHT contract
     }
 
     // Update admin address by the previous dev.
@@ -184,8 +184,8 @@ contract BnbStaking is Ownable {
             }
         }
         if(msg.value > 0) {
-            IWBNB(WBNB).deposit{value: msg.value}();
-            assert(IWBNB(WBNB).transfer(address(this), msg.value));
+            IWHT(WHT).deposit{value: msg.value}();
+            assert(IWHT(WHT).transfer(address(this), msg.value));
             user.amount = user.amount.add(msg.value);
         }
         user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
@@ -193,7 +193,7 @@ contract BnbStaking is Ownable {
         emit Deposit(msg.sender, msg.value);
     }
 
-    function safeTransferBNB(address to, uint256 value) internal {
+    function safeTransferHT(address to, uint256 value) internal {
         (bool success, ) = to.call{gas: 23000, value: value}("");
         // (bool success,) = to.call{value:value}(new bytes(0));
         require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
@@ -211,8 +211,8 @@ contract BnbStaking is Ownable {
         }
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
-            IWBNB(WBNB).withdraw(_amount);
-            safeTransferBNB(address(msg.sender), _amount);
+            IWHT(WHT).withdraw(_amount);
+            safeTransferHT(address(msg.sender), _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
 

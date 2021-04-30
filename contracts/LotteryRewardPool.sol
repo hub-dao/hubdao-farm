@@ -1,28 +1,28 @@
 pragma solidity 0.6.12;
 
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol';
+import '@hubdao-finance/hubdao-lib/contracts/token/HRC20/IHRC20.sol';
+import '@hubdao-finance/hubdao-lib/contracts/token/HRC20/SafeHRC20.sol';
+import '@hubdao-finance/hubdao-lib/contracts/access/Ownable.sol';
 
-import './MasterChef.sol';
+import './MasterHub.sol';
 
 contract LotteryRewardPool is Ownable {
-    using SafeBEP20 for IBEP20;
+    using SafeHRC20 for IHRC20;
 
-    MasterChef public chef;
+    MasterHub public hub;
     address public adminAddress;
     address public receiver;
-    IBEP20 public lptoken;
-    IBEP20 public cake;
+    IHRC20 public lptoken;
+    IHRC20 public hd;
 
     constructor(
-        MasterChef _chef,
-        IBEP20 _cake,
+        MasterHub _hub,
+        IHRC20 _hd,
         address _admin,
         address _receiver
     ) public {
-        chef = _chef;
-        cake = _cake;
+        hub = _hub;
+        hd = _hd;
         adminAddress = _admin;
         receiver = _receiver;
     }
@@ -36,16 +36,16 @@ contract LotteryRewardPool is Ownable {
         _;
     }
 
-    function startFarming(uint256 _pid, IBEP20 _lptoken, uint256 _amount) external onlyAdmin {
-        _lptoken.safeApprove(address(chef), _amount);
-        chef.deposit(_pid, _amount);
+    function startFarming(uint256 _pid, IHRC20 _lptoken, uint256 _amount) external onlyAdmin {
+        _lptoken.safeApprove(address(hub), _amount);
+        hub.deposit(_pid, _amount);
         emit StartFarming(msg.sender, _pid);
     }
 
     function  harvest(uint256 _pid) external onlyAdmin {
-        chef.deposit(_pid, 0);
-        uint256 balance = cake.balanceOf(address(this));
-        cake.safeTransfer(receiver, balance);
+        hub.deposit(_pid, 0);
+        uint256 balance = hd.balanceOf(address(this));
+        hd.safeTransfer(receiver, balance);
         emit Harvest(msg.sender, _pid);
     }
 
@@ -54,12 +54,12 @@ contract LotteryRewardPool is Ownable {
     }
 
     function  pendingReward(uint256 _pid) external view returns (uint256) {
-        return chef.pendingCake(_pid, address(this));
+        return hub.pendingCake(_pid, address(this));
     }
 
     // EMERGENCY ONLY.
-    function emergencyWithdraw(IBEP20 _token, uint256 _amount) external onlyOwner {
-        cake.safeTransfer(address(msg.sender), _amount);
+    function emergencyWithdraw(IHRC20 _token, uint256 _amount) external onlyOwner {
+        hd.safeTransfer(address(msg.sender), _amount);
         emit EmergencyWithdraw(msg.sender, _amount);
     }
 

@@ -1,15 +1,15 @@
 pragma solidity 0.6.12;
 
-import '@pancakeswap/pancake-swap-lib/contracts/math/SafeMath.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
-import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/SafeBEP20.sol';
+import '@hubdao-finance/hubdao-lib/contracts/math/SafeMath.sol';
+import '@hubdao-finance/hubdao-lib/contracts/token/HRC20/IHRC20.sol';
+import '@hubdao-finance/hubdao-lib/contracts/token/HRC20/SafeHRC20.sol';
 
 // import "@nomiclabs/buidler/console.sol";
 
-// SousChef is the chef of new tokens. He can make yummy food and he is a fair guy as well as MasterChef.
-contract SousChef {
+// HubDao is the chef of new tokens. He can make yummy food and he is a fair guy as well as MasterHub.
+contract HubDao {
     using SafeMath for uint256;
-    using SafeBEP20 for IBEP20;
+    using SafeHRC20 for IHRC20;
 
     // Info of each user.
     struct UserInfo {
@@ -37,7 +37,7 @@ contract SousChef {
     }
 
     // The SYRUP TOKEN!
-    IBEP20 public syrup;
+    IHRC20 public hdt;
     // rewards created per block.
     uint256 public rewardPerBlock;
 
@@ -59,12 +59,12 @@ contract SousChef {
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
     constructor(
-        IBEP20 _syrup,
+        IHRC20 _hdt,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
         uint256 _endBlock
     ) public {
-        syrup = _syrup;
+        hdt = _hdt;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _endBlock;
@@ -96,7 +96,7 @@ contract SousChef {
         PoolInfo storage pool = poolInfo;
         UserInfo storage user = userInfo[_user];
         uint256 accRewardPerShare = pool.accRewardPerShare;
-        uint256 stakedSupply = syrup.balanceOf(address(this));
+        uint256 stakedSupply = hdt.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && stakedSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 tokenReward = multiplier.mul(rewardPerBlock);
@@ -110,25 +110,25 @@ contract SousChef {
         if (block.number <= poolInfo.lastRewardBlock) {
             return;
         }
-        uint256 syrupSupply = syrup.balanceOf(address(this));
-        if (syrupSupply == 0) {
+        uint256 hdtSupply = hdt.balanceOf(address(this));
+        if (hdtSupply == 0) {
             poolInfo.lastRewardBlock = block.number;
             return;
         }
         uint256 multiplier = getMultiplier(poolInfo.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(rewardPerBlock);
 
-        poolInfo.accRewardPerShare = poolInfo.accRewardPerShare.add(tokenReward.mul(1e12).div(syrupSupply));
+        poolInfo.accRewardPerShare = poolInfo.accRewardPerShare.add(tokenReward.mul(1e12).div(hdtSupply));
         poolInfo.lastRewardBlock = block.number;
     }
 
 
-    // Deposit Syrup tokens to SousChef for Reward allocation.
+    // Deposit Syrup tokens to HubDao for Reward allocation.
     function deposit(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
         UserInfo storage user = userInfo[msg.sender];
         updatePool();
-        syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
+        hdt.safeTransferFrom(address(msg.sender), address(this), _amount);
         // The deposit behavior before farming will result in duplicate addresses, and thus we will manually remove them when airdropping.
         if (user.amount == 0 && user.rewardPending == 0 && user.rewardDebt == 0) {
             addressList.push(address(msg.sender));
@@ -140,14 +140,14 @@ contract SousChef {
         emit Deposit(msg.sender, _amount);
     }
 
-    // Withdraw Syrup tokens from SousChef.
+    // Withdraw Syrup tokens from HubDao.
     function withdraw(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not enough");
 
         updatePool();
-        syrup.safeTransfer(address(msg.sender), _amount);
+        hdt.safeTransfer(address(msg.sender), _amount);
 
         user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.sub(_amount);
@@ -159,7 +159,7 @@ contract SousChef {
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw() public {
         UserInfo storage user = userInfo[msg.sender];
-        syrup.safeTransfer(address(msg.sender), user.amount);
+        hdt.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;

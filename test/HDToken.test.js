@@ -1,10 +1,10 @@
 const { assert } = require("chai");
 
-const CakeToken = artifacts.require('CakeToken');
+const HDToken = artifacts.require('HDToken');
 
-contract('CakeToken', ([alice, bob, carol, dev, minter]) => {
+contract('HDToken', ([alice, bob, carol, dev, minter]) => {
     beforeEach(async () => {
-        this.cake = await CakeToken.new({ from: minter });
+        this.cake = await HDToken.new({ from: minter });
     });
 
 
